@@ -1,0 +1,384 @@
+---
+title: 'STA1040: Group_Assignment_2'
+author: "Group 1"
+date: "2024-10-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Load knitr package to set global chunk options
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+```{r}
+
+# install necessary packages
+# install.packages("tidyverse")
+
+# load the packages
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+# options(timeout = 300)  # Increase timeout to 300 seconds (5 minutes)
+# download.file("https://dxl-datasets.s3.amazonaws.com/data/ppp_fl.csv", destfile = "ppp_fl.csv")
+```
+
+```{r}
+# Load the downloaded CSV file
+data <- read_csv("ppp_fl.csv")
+
+```
+
+```{r}
+
+# viewing whole data in a new tab
+view(data)
+```
+
+```{r}
+
+# Dimension of dataframe
+dim(data)
+```
+
+```{r}
+
+# The first few rows
+head(data)
+```
+
+```{r}
+# The last few rows
+tail(data)
+```
+
+```{r}
+# To know all of our column names
+colnames(data)
+```
+
+**Data cleaning**
+
+```{r}
+# Checking each variable type
+glimpse(data)
+```
+
+As you can see from the above the data types of the variables: Date, Amount, AmountForgiven, BusinessAge, BusinessType need some modifications.
+
+```{r}
+# Changing the data type of the variable and setting a format
+data$Date <- as.Date(data$Date, format = "%m/%d/%Y")
+
+# Checking the change
+class(data$Date)
+```
+
+```{r}
+# Changing data type of the 2 variables to numeric
+# But before converting them - we have to remove the $ and , sign
+data$Amount <- gsub("[$,]", "", data$Amount)
+data$AmountForgiven <- gsub("[$,]", "", data$AmountForgiven)
+
+glimpse(data)
+```
+
+```{r}
+# Changing the data types
+data <- data %>% 
+  mutate(Amount = as.numeric(data$Amount), 
+         AmountForgiven = as.numeric(data$AmountForgiven))
+
+# Renaming the columns to indicate the currency is in dollars
+data <- data %>% 
+  rename(Amount_in_Dollar = Amount, AmountForgiven_in_Dollar = AmountForgiven)
+
+# Checking the change
+class(data$Amount_in_Dollar)
+class(data$AmountForgiven_in_Dollar)
+```
+
+For BusinessAge, and BusinessType we have to check whether we want them to be factor data types.
+
+```{r}
+# Extracting  unique values using unique(), and lapply() to appply the function to all the elements in the list 
+unique_values <- lapply(list(BusinessAge = data$BusinessAge, 
+                              BusinessType = data$BusinessType), unique)
+
+# Print the unique values
+print(unique_values)
+
+```
+
+```{r}
+# Changing the data type of both variables in the above to factor
+data <- data %>% 
+  mutate(BusinessAge = as.factor(BusinessAge), 
+         BusinessType = as.factor(BusinessType)) 
+
+class(data$BusinessAge)
+class(data$BusinessType)
+```
+
+```{r}
+glimpse(data)
+```
+
+```{r}
+# checking for missing Values
+anyNA(data)
+```
+
+```{r}
+#Checking for duplicated values
+anyDuplicated(data)
+```
+
+```{r}
+# Returns a logical vector indicating duplicated rows
+duplicates <- duplicated(data)
+
+# Show only duplicated rows
+data[duplicates, ]
+```
+
+**Breaking down the Borrower Address Column**
+
+This allows for analysis of geographic distribution, grouping by state or city, and identifying regional trends
+
+```{r}
+
+# Split BorrowerAddress into street, city, and a combined state/zip column
+data <- data %>%
+  separate(BorrowerAddress, into = c("BorrowerStreet", "BorrowerCity", "BorrowerStateZip"), sep = ",\\s*", extra = "merge", fill = "right") %>%
+  separate(BorrowerStateZip, into = c("BorrowerState", "BorrowerZip_Code"), sep = "\\s", extra = "merge", fill = "right")
+
+# Preview the resulting dataset with the new address columns
+View(data)
+```
+
+```{r}
+# Ensure ZIP codes are in the correct format (5 digits)
+data <- data %>%
+  mutate(BorrowerZip_Code = substr(BorrowerZip_Code, 1, 5))
+```
+
+```{r}
+glimpse(data)
+```
+
+**Breaking down the Date Column**
+
+This breakdown is important because having separate columns for year, month, and day enables us to analyze data at a more granular level, such as trends over time or seasonal effects.
+
+```{r}
+
+data <- data %>%
+  mutate(Date = ymd(Date), # Converting the Date to proper date format (MM/DD/YYYY)
+         Year = year(Date), # Extracting the year
+         Month = month(Date), # Extracting the month
+         Day = day(Date)) # Extracting the day
+
+# View the resulting dataset
+View(data)
+```
+
+**Breaking down the Lender Address Column**
+
+By separating components like street, city, state, and zip code, you can analyze each aspect individually. For example, you can focus on city-wise trends, which might not be apparent when the addresses are combined.
+
+```{r}
+# Separate LenderAddress into multiple components and add them as new columns
+data <- data %>%
+  separate(LenderAddress, into = c("LenderStreet", "LenderCity", "LenderStateZip"), sep = ",\\s*", extra = "merge", fill = "right") %>%
+  separate(LenderStateZip, into = c("LenderState", "LenderZipCode"), sep = "\\s", extra = "merge", fill = "right")
+
+# Preview the resulting dataset with the new address columns
+View(data)
+
+```
+
+```{r}
+# Ensure ZIP codes are in the correct format (5 digits)
+data <- data %>%
+  mutate(LenderZipCode = substr(LenderZipCode, 1, 5))
+
+# Preview the resulting dataset
+View(data)
+```
+
+```{r}
+# Save the cleaned dataset as a CSV file 
+write.csv(data, "cleaned_dataset.csv", row.names = FALSE)
+```
+
+```{r}
+# Import the cleaned dataset
+cleaned_data <- read_csv("cleaned_dataset.csv")
+```
+
+```{r}
+View(cleaned_data)
+```
+
+```{r}
+glimpse(cleaned_data)
+```
+
+```{r}
+# Changing the data type of both variables in the above to factor
+cleaned_data <- cleaned_data %>% 
+  mutate(BusinessAge = as.factor(BusinessAge), 
+         BusinessType = as.factor(BusinessType)) 
+
+class(cleaned_data$BusinessAge)
+class(cleaned_data$BusinessType)
+```
+
+
+```{r}
+glimpse(cleaned_data)
+```
+
+### Question 2: Return the total amount of money loaned by month from 2020 to 2021.
+
+```{r}
+# First let's add a new "Total_loan_in_dollar" column 
+cleaned_data <- cleaned_data %>% 
+ mutate(Total_loan_in_dollar = Amount_in_Dollar + AmountForgiven_in_Dollar)
+
+ #cleaned_data$Total_loan_in_dollar <- cleaned_data$Amount_in_Dollar + cleaned_data$AmountForgiven_in_Dollar
+ #view(cleaned_data)
+```
+
+```{r}
+# Convert numeric months to full month names
+cleaned_data <- cleaned_data %>%
+  mutate(Month = month.name[Month])
+```
+
+```{r}
+# Grouping by month and returning the total loan
+grouped_data <- cleaned_data %>%
+  filter(Year %in% c(2020, 2021)) %>%
+  group_by(Month) %>% 
+  summarise(Total_amount_of_money_loaned_from_2020_to_2021 = sum(Total_loan_in_dollar))
+
+# View the grouped data
+view(grouped_data)
+
+```
+
+```{r}
+# Define the correct order for the months
+month_order <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+
+# Convert the Month column to a factor with the specified levels
+grouped_data$Month <- factor(grouped_data$Month, levels = month_order)
+
+# Order the data frame by Month
+ordered_data <- grouped_data[order(grouped_data$Month), ]
+
+view(ordered_data)
+```
+
+
+### Question 3: Return the name and total money loaned for Florida's top PPP lender in 2021 ("top" = most money loaned)
+
+```{r}
+# Filtering lenders in FL in 2021, summing the loan amounts
+florida_top_lender <- cleaned_data %>% 
+  filter(Year == 2021 & LenderState == "FL")  %>% 
+  group_by(Lender) %>% 
+  summarise(Total_loan_in_dollar = sum(Total_loan_in_dollar, na.rm = TRUE)) %>%
+  arrange(desc(Total_loan_in_dollar))  # Ordering from highest to lowest
+
+# View the sorted lender data
+view(florida_top_lender)
+
+# Get the lender with the maximum total loan amount
+top_lender <- florida_top_lender %>%
+  slice_max(Total_loan_in_dollar)  # Alternative to filter for max value
+top_lender
+
+``` 
+
+### Question 4: what percent of loan money went to borrowers in the state of Miami?
+
+```{r}
+# Filter for Miami and calculate total loan amount for Miami
+miami_total <- data %>%
+  filter(BorrowerCity == "Miami") %>%
+  summarise(TotalMiamiLoan = sum(Amount_in_Dollar, na.rm = TRUE))
+
+# Calculate total loan amount for all borrowers
+total_loan_amount <- data %>%
+  summarise(TotalLoan = sum(Amount_in_Dollar, na.rm = TRUE))
+
+# Calculate the percentage of loan money for Miami
+miami_percentage <- (miami_total$TotalMiamiLoan / total_loan_amount$TotalLoan) * 100
+
+# Display the result
+miami_percentage
+```
+### Question 5: Bar plot showing average jobs by business age in certain groups
+
+```{r}
+
+# Categorize Business Age into the four specified categories
+data <- data %>%
+  mutate(BusinessAgeCategory = recode(BusinessAge,
+                                      "Startup, Loan Funds will Open Business" = "Startup",
+                                      "2 years old or less" = "0-2 years",
+                                      "Existing or more than 2 years old" = "3+ years",
+                                      .default = "Other/Unknown"
+  ))
+
+# Calculate the average jobs by business age category and drop the groups
+agg_tbl <- data %>%
+  group_by(BusinessAgeCategory) %>%
+  summarise(Average_Jobs = mean(Jobs), .groups = 'drop')
+
+# Reorder the BusinessAgeCategory factor based on Average_Jobs in descending order
+agg_tbl <- agg_tbl %>%
+  mutate(BusinessAgeCategory = fct_reorder(BusinessAgeCategory, Average_Jobs, .desc = TRUE))
+
+# Plot the average jobs by business age category, now ordered from highest to lowest
+ggplot(agg_tbl, aes(x = BusinessAgeCategory, y = Average_Jobs)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  theme_minimal() +
+  labs(title = "Average Jobs by Business Age Category", x = "Business Age Category", y = "Average Jobs") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+### Question 6: Horizontal bar plot showing total amount borrowed in each zip code in the city of Coral Gables
+
+```{r}
+# Filter for Coral Gables and only 5-digit zip codes
+coral_gables_data <- cleaned_data %>%
+  filter(BorrowerCity == "CORAL GABLES" & nchar(as.character(BorrowerZip_Code)) == 5)
+
+# Summarize the total amount borrowed by zipcode
+zipcode_summary <- coral_gables_data %>%
+  group_by(BorrowerZip_Code) %>%
+  summarise(Total_Amount_Borrowed = sum(Amount_in_Dollar, na.rm = TRUE)) %>%
+  arrange(desc(Total_Amount_Borrowed))
+
+# Convert amount to millions for better readability
+zipcode_summary$Total_Amount_Borrowed <- zipcode_summary$Total_Amount_Borrowed / 1e6
+
+# Create the horizontal bar plot
+ggplot(zipcode_summary, aes(x = reorder(BorrowerZip_Code, Total_Amount_Borrowed), y = Total_Amount_Borrowed)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +  # Flip coordinates for horizontal bars
+  scale_y_continuous(labels = scales::dollar_format(scale = 1, prefix = "$", suffix = "M")) +  # Format y-axis labels
+  labs(title = "Total Amount Borrowed in Coral Gables by Zip Code",
+       x = "Zip Code",
+       y = "Total Amount Borrowed (in Millions)") +
+  theme_minimal()
+
+```
