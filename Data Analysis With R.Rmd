@@ -1,0 +1,312 @@
+---
+title: "Data Analysis With R"
+author: "Mark Mayana"
+date: "2024-12-10"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load Required Libraries
+
+```{r}
+library(lme4)
+library(nlme)
+library(ggplot2)
+library(dplyr)
+library(lattice)
+library(geepack)
+library(readxl)
+library(tinytex)
+library(grid)  # For grid.text()
+
+```
+
+**Working with a Dataset**
+
+```{r}
+# Data input
+data <- c(7, 4, 6, 8, 9, 1, 0, 3, 2, 5, 0)
+
+# a) Rank the dataset
+data_rank <- rank(data)
+
+# b) Sort the data
+data_sorted <- sort(data)
+
+# c) Order the data (indices of sorted data)
+data_order <- order(data)
+
+# d) Create a data frame to view all results together
+result <- data.frame(
+  Original_Data = data,
+  Rank = data_rank,
+  Sorted_Data = data_sorted,
+  Order = data_order
+)
+
+# Print the results
+print(result)
+```
+
+**Analysis of the Diamonds Dataset in R library**
+
+```{r}
+data(diamonds)
+
+# a) Identify two nominal variables and two ratio variables
+nominal_vars <- c("cut", "color")  # Nominal variables
+ratio_vars <- c("carat", "price") # Ratio variables
+
+# Print the variables
+print("Nominal variables: cut, color")
+print("Ratio variables: carat, price")
+```
+
+b)  Plot a histogram of price values
+
+```{r}
+# Create the histogram
+hist(
+  diamonds$price,
+  main = "Histogram of Diamond Prices",
+  xlab = "Price (in US dollars)",
+  col = "pink",
+  border = "red",
+  breaks = 50
+)
+
+# Add a comment in the bottom margin
+mtext(
+  "Comment: The price distribution is right-skewed, with most diamonds priced below $5000.",
+  side = 1, # Bottom margin
+  line = 4, # Distance from the axis
+  col = "darkgreen" # Text color
+)
+```
+
+c)  Determine the mean of the "depth" variable
+
+```{r}
+mean_depth <- mean(diamonds$depth)
+print(paste("Mean depth:", mean_depth))
+
+# Plot a histogram of diamond depths
+hist(
+  diamonds$depth,
+  main = "Histogram of Diamond Depths",
+  xlab = "Depth (%)",
+  col = "yellow",
+  border = "black",
+  breaks = 30
+)
+
+mtext(
+  "Comment:The depth distribution is bell-shaped, with most values between 57% and 65%.",
+  side = 1, # Bottom margin
+  line = 4, # Distance from the axis
+  col = "darkgreen" # Text color
+)
+```
+
+Scatter plot of carat vs price to check the relationship
+
+```{r}
+plot(
+  diamonds$carat, diamonds$price,
+  main = "Scatter Plot of Carat vs Price",
+  xlab = "Carat",
+  ylab = "Price (in US dollars)",
+  col = "blue",
+  pch = 16,
+  cex = 0.5
+)
+
+# Add a regression line to the scatter plot
+abline(lm(price ~ carat, data = diamonds), col = "black", lwd = 2)
+
+# Calculate and print the correlation coefficient
+correlation <- cor(diamonds$carat, diamonds$price)
+print(paste("Correlation between carat and price:", correlation))
+
+mtext(
+  "The correlation coefficient (0.92) indicates a positive relationship between carat and price.",
+  side = 1, # Bottom margin
+  line = 4, # Distance from the axis
+  col = "darkgreen" # Text color
+)
+```
+**Telco Dataset Analysis**
+
+```{r}
+# Load customer churn dataset
+file_path <- "C:/Users/USER/Downloads/School/Stastitical Computing sta1040/telco data.xlsx"
+data <- read_excel(file_path, sheet = "telco")
+```
+Relationship between age and income
+
+```{r}
+# Calculate correlation coefficient
+correlation_age_income <- cor(data$age, data$income, use = "complete.obs")
+print(paste("Correlation between age and income:", round(correlation_age_income, 2)))
+
+# Scatter plot for age vs income with annotation
+ggplot(data, aes(x = age, y = income)) +
+  geom_point(color = "blue", alpha = 0.6) +
+  labs(
+    title = paste("Scatter Plot of Age vs Income\nCorrelation Coefficient:", round(correlation_age_income, 2)),
+    x = "Age",
+    y = "Income",
+    caption = "There is a weak correlation between age and income as indicated by the correlation coefficient.."
+  ) +
+  theme_minimal() +
+  theme(
+    plot.caption = element_text(color = "darkgreen", hjust = 1) # Customize caption
+  )
+```
+Boxplot of tenure by gender
+
+```{r}
+ggplot(data, aes(x = factor(gender), y = tenure, fill = factor(gender))) +
+  geom_boxplot() +
+  labs(
+    title = "Boxplot of Tenure by Gender",
+    x = "Gender (0: Male, 1: Female)",
+    y = "Tenure",
+    caption = "The boxplot shows gender-wise differences in tenure, which can be analyzed further for significance."
+  ) +
+  scale_fill_manual(values = c("skyblue", "pink")) +
+  theme_minimal() +
+  theme(
+    plot.caption = element_text(color = "darkgreen", hjust =0.1, size = 11)
+  )
+```
+Percentage of married people residing in region 3
+
+```{r}
+# Filter data for Region 3
+region3_data <- data %>% filter(region == 3)
+total_region3 <- nrow(region3_data)
+married_region3 <- sum(region3_data$marital == 1)
+
+# Calculate and print percentage
+married_percentage <- (married_region3 / total_region3) * 100
+print(paste("Percentage of married people in Region 3:", round(married_percentage, 2), "%"))
+
+```
+**Orthodontic Data Analysis**
+The Orthodontic dataset provides information on dental growth measurements.
+
+```{r}
+# Load Orthodont dataset
+PRlong <- Orthodont
+
+# Display the first few rows of the data
+head(PRlong)
+```
+Open the data in a separate viewer
+
+```{r}
+View(PRlong)
+```
+Further analysis of the dataset
+
+```{r}
+# Show the structure of the data
+str(PRlong)
+
+# Display the dimensions of the data
+dim(PRlong)
+
+# Comment: The dataset contains orthodontic measurements, including age, gender, and distance values for analysis.
+
+```
+Gender column created to allow for simplified grouping and analysis based on sex.
+
+```{r}
+# Add a gender column
+PRlong$gender <- ifelse(PRlong$Sex == "Male", "M", "F")
+data.frame(PRlong$gender)
+```
+
+ Display the last 20 rows of selected columns
+
+```{r}
+tail(PRlong[, c("Subject", "age", "distance", "gender", "Sex")], 20)
+```
+Comment: The data is arranged by Subject for better visualization of individual records.
+
+```{r}
+# Arrange data by Subject
+PRlong <- PRlong %>% arrange(Subject)
+
+# View the arranged data
+PRlong
+
+```
+
+Variables transformed for analysis, including scaling age and converting key fields to factors.
+
+```{r}
+# Perform transformations for further analysis
+PRlong$Sage <- 2 * PRlong$age + 6 
+PRlong$Sage.c.8 <- PRlong$age - 8
+
+# Convert variables to factors for categorical analysis
+PRlong$age <- as.factor(PRlong$age)
+PRlong$Sgender <- as.factor(PRlong$gender)
+PRlong$Subject <- as.factor(PRlong$Subject)
+```
+Createng a line plot of distance by age, grouped by gender
+
+```{r}
+# Line plot of distance by age, grouped by gender
+xyplot(
+  distance ~ age | gender,
+  data = PRlong,
+  type = "b",
+  lwd = 2,
+  pch = 19,
+  cex = 1.2,
+  groups = Subject
+)
+
+# Add caption for the xyplot
+grid.text(
+ "This plot shows individual dental growth trajectories by age, grouped by gender.",
+  x = 0.5,  # Horizontal center
+  y = 0.02, # Near bottom of the plot
+  gp = gpar(col = "darkgreen", fontsize = 12) # Style the text
+)
+
+```
+Grouped data plot for dental growth
+
+```{r}
+dental.grouped <- groupedData(distance ~ age | Subject, outer = ~ gender, data = PRlong)
+plot(
+  dental.grouped, 
+  display = "subject", 
+  outer = TRUE, 
+  aspect = 1, 
+  key = FALSE,
+  xlab = "Age", 
+  ylab = "Dental Growth (mm)", 
+  pch = 19, 
+  cex = 0.8,
+  main = "Potthoff & Roy (1964) Orthodontic Measurements on Children"
+)
+
+# Add caption for the grouped data plot
+grid.text(
+  "This grouped data plot highlights dental growth trends across subjects and gender.",
+  x = 0.5,  # Horizontal center
+  y = 0.02, # Near bottom of the plot
+  gp = gpar(col = "darkgreen", fontsize = 12, fontface = "italic") # Style the text
+)
+
+```
