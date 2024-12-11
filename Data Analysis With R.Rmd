@@ -6,6 +6,44 @@ output:
   html_document:
     df_print: paged
 ---
+Key Highlights
+Orthodontic Data Analysis:
+
+Objective: Analyze dental growth trajectories for children, grouped by gender.
+
+Approach: Used lattice and nlme packages for visualizing grouped and individual growth patterns.
+
+Outcome: Insights into gender-specific growth trends with well-structured line plots and grouped data visualizations.
+Diamonds Dataset Exploration:
+
+Objective: Examine relationships and distributions in the diamonds dataset.
+Techniques:
+Identified nominal and ratio variables for focused analysis.
+Visualized distributions of price and depth, highlighting key trends (e.g., right-skewed price distribution).
+Investigated the relationship between carat and price using scatter plots and regression analysis.
+Key Insight: Strong positive correlation (0.92) between carat and price.
+Telco Dataset Analysis:
+
+Objective: Explore customer churn data for actionable insights.
+Techniques:
+Examined age-income correlation with scatter plots and annotations.
+Visualized tenure distribution by gender using boxplots.
+Computed the percentage of married individuals in Region 3.
+Key Insights:
+Weak correlation (0.33) between age and income.
+Gender-wise tenure differences warrant further statistical testing.
+Statistical Operations on Custom Dataset:
+
+Ranked, sorted, and ordered a dataset, showcasing foundational data manipulation skills.
+Skills and Tools Demonstrated
+Libraries:
+lattice, nlme, lme4, ggplot2, dplyr, grid, geepack, readxl, tinytex.
+Statistical Techniques:
+Correlation analysis, data transformations, and descriptive statistics.
+Visualization:
+Histograms, scatter plots, boxplots, and grouped line plots with annotations and captions.
+Data Management:
+Data cleaning, filtering, and organizing datasets for meaningful analysis.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
