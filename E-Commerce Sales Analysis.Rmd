@@ -1,0 +1,267 @@
+---
+title: "E-Commerce Sales Analysis"
+author: "Mark Mayana"
+date: "2024-12-19"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Introduction**
+This analysis explores an e-commerce dataset to uncover insights related to revenue, sales transactions, customer behavior, product performance, and more. The dataset includes information on product pricing, categories, reviews, and discounts.
+
+```{r setup}
+# Load required libraries 
+library(readxl)
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(stringr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+
+```
+Load The Dataset
+
+```{r}
+data <- read_csv("C:/Users/USER/Downloads/datasets/amazon sales/amazon.csv")
+
+# View structure and summary 
+glimpse(data)
+summary(data)
+```
+Data Cleaning and Handling Missing Values 
+
+```{r}
+# Check for missing values
+colSums(is.na(data))
+
+# Remove rows with missing values
+data_clean <- data %>%
+  drop_na()
+
+# Check updated dataset
+dim(data_clean)
+colSums(is.na(data_clean))
+```
+Data Type Conversion of columns needed for analysis
+
+```{r}
+# Convert relevant columns to appropriate data types
+data_clean <- data_clean %>%
+  mutate(
+    product_id = as.factor(product_id),
+    category = as.factor(category),
+    user_id = as.factor(user_id),
+    review_id = as.factor(review_id),
+    
+    discounted_price = as.numeric(gsub("[^0-9.]", "", discounted_price)),
+    actual_price = as.numeric(gsub("[^0-9.]", "", actual_price)),
+    discount_percentage = as.numeric(gsub("[^0-9.]", "", discount_percentage)),
+    rating = as.numeric(rating),
+    
+    rating_count = as.integer(rating_count),
+    product_name = as.character(product_name),
+    about_product = as.character(about_product),
+    user_name = as.character(user_name),
+    review_title = as.character(review_title),
+    review_content = as.character(review_content),
+    img_link = as.character(img_link),
+    product_link = as.character(product_link),
+    profit_margin = actual_price - discounted_price)
+
+# View the cleaned structure
+glimpse(data_clean)
+```
+**Exploratory Data Analysis**
+Key Sales Metrics
+
+```{r}
+# Add a sales_amount column
+data_clean <- data_clean %>%
+  mutate(sales_amount = discounted_price)
+
+# Calculate Key Metrics
+# Total revenue
+total_revenue <- sum(data_clean$sales_amount, na.rm = TRUE)
+
+# Total number of transactions
+total_transactions <- nrow(data_clean)
+
+# Average and median sales values
+avg_sales <- mean(data_clean$sales_amount, na.rm = TRUE)
+median_sales <- median(data_clean$sales_amount, na.rm = TRUE)
+
+# Display Metrics
+key_metrics <- list(
+  total_revenue = total_revenue,
+  total_transactions = total_transactions,
+  avg_sales = avg_sales,
+  median_sales = median_sales
+)
+print(key_metrics)
+```
+
+Which Categories Generate the Most Revenue?
+
+```{r}
+category_revenue <- data_clean %>%
+  group_by(category) %>%
+  summarise(
+    total_revenue = sum(sales_amount, na.rm = TRUE),
+    avg_revenue = mean(sales_amount, na.rm = TRUE)
+  ) %>%
+  arrange(desc(total_revenue))
+
+# View Category Results
+print(category_revenue)
+```
+
+What are the top-selling and least-selling products
+```{r}
+# Adding short product names for better visual output
+data_clean <- data_clean %>%
+  mutate(short_product_name = str_extract(product_name, "^([^\\s]+\\s+){0,2}[^\\s]+"))
+
+# Group and summarize products
+top_products <- data_clean %>%
+  group_by(short_product_name) %>%
+  summarise(
+    total_revenue = sum(sales_amount, na.rm = TRUE),
+    total_quantity = sum(rating_count, na.rm = TRUE)
+  ) %>%
+  arrange(desc(total_revenue))
+
+kable(top_products %>% head(10), caption = "Top 10 Products by Revenue")
+kable(top_products %>% tail(10), caption = "Bottom 10 Products by Revenue")
+```
+
+Analyze total sales and revenue by product category
+```{r}
+# Analyze total sales and revenue by product category
+category_performance <- data_clean %>%
+  separate(category, into = c("main_category", "sub_category"), sep = "\\|", extra = "merge", fill = "right") %>%
+  group_by(main_category) %>%
+  summarise(
+    total_revenue = sum(sales_amount, na.rm = TRUE),
+    total_sales_volume = sum(rating_count, na.rm = TRUE)
+  ) %>%
+  arrange(desc(total_revenue))
+
+# Print the results
+print(category_performance)
+```
+
+**Customer Analysis**
+Who are the top customers based on revenue or sales volume?
+```{r}
+# Analyze customer revenue
+customer_analysis <- data_clean %>%
+  mutate(first_name = str_extract(user_name, "^[^, ]+")) %>%
+  group_by(first_name) %>%
+  summarise(
+    total_revenue = sum(sales_amount * rating_count, na.rm = TRUE),
+    total_sales_volume = sum(rating_count, na.rm = TRUE)
+  ) %>%
+  arrange(desc(total_revenue))
+
+kable(customer_analysis %>% head(10), caption = "Top 10 Customers by Revenue")
+```
+Are there repeat customers?
+```{r}
+# Add a new column with only the first name extracted from `user_name`
+data_clean <- data_clean %>%
+  mutate(first_name = str_extract(user_name, "^[^, ]+"))
+
+repeat_customers <- data_clean %>%
+  group_by(first_name) %>%
+  summarise(transaction_count = n()) %>%
+  filter(transaction_count > 1)
+
+# View repeat customers
+print(repeat_customers)
+```
+
+
+```{r}
+# Segment customers based on purchase volume
+customer_segments <- data_clean %>%
+  group_by(user_id) %>%
+  summarise(
+    total_purchases = sum(rating_count, na.rm = TRUE),
+    total_spent = sum(sales_amount, na.rm = TRUE)
+  ) %>%
+  mutate(
+    customer_segment = case_when(
+      total_purchases <= 5 ~ "Low Purchaser",
+      total_purchases > 5 & total_purchases <= 15 ~ "Medium Purchaser",
+      total_purchases > 15 ~ "High Purchaser"
+    )
+  ) %>%
+  group_by(customer_segment) %>%
+  summarise(
+    avg_spent_per_customer = mean(total_spent, na.rm = TRUE),
+    total_customers = n()
+  )
+
+# Print the results
+print(customer_segments)
+```
+**Discount and Promotion Analysis**
+Correlation Between Discounts and Sales Volume
+```{r}
+correlation <- cor(data_clean$discount_percentage, data_clean$rating_count, use = "complete.obs")
+cat("Correlation between discount percentage and sales volume is:", correlation)
+```
+Discount Range Analysis
+```{r}
+
+discount_analysis <- data_clean %>%
+  mutate(
+    discount_range = case_when(
+      discount_percentage >= 0 & discount_percentage < 20 ~ "0-20%",
+      discount_percentage >= 20 & discount_percentage < 40 ~ "20-40%",
+      discount_percentage >= 40 & discount_percentage < 60 ~ "40-60%",
+      discount_percentage >= 60 ~ "60%+"
+    )
+  ) %>%
+  group_by(discount_range) %>%
+  summarise(
+    total_sales_volume = sum(rating_count, na.rm = TRUE),
+    total_revenue = sum(sales_amount, na.rm = TRUE),
+    avg_rating = mean(rating, na.rm = TRUE)
+  )
+
+# Create a table with proper spacing between the title and content
+discount_analysis %>%
+  kable(caption = "Discount Range Analysis") %>%
+  kable_styling(latex_options = c("hold_position"), font_size = 12) %>%
+  row_spec(0, extra_css = "padding-bottom: 15px;")  # Adds space below the header row
+```
+
+Grouping products by rating range
+```{r}
+rating_analysis <- data_clean %>%
+  mutate(
+    rating_range = case_when(
+      rating >= 0 & rating < 3 ~ "Low (0-3)",
+      rating >= 3 & rating < 4 ~ "Medium (3-4)",
+      rating >= 4 ~ "High (4+)"
+    )
+  ) %>%
+  group_by(rating_range) %>%
+  summarise(
+    total_sales_volume = sum(rating_count, na.rm = TRUE),
+    total_revenue = sum(sales_amount, na.rm = TRUE)
+  )
+
+# Print the results
+print(rating_analysis)
+
+```
+
+
+
